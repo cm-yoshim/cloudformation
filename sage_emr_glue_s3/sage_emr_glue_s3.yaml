@@ -1,0 +1,234 @@
+---
+# Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This master template executes other templates to create an EMR cluster with Glue, and a SageMaker notebook instance
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Environment Information
+      Parameters:
+      - VPCId
+      - VPCSubnet
+    - Label:
+        default: SageMaker Notebook Parameters
+      Parameters:
+      - SageMakerInstanceName
+      - SageMakerInstanceType
+      - SageMakerConfigName
+    - Label:
+        default: EMR Parameters
+      Parameters:
+      - emrInstanceType
+      #- emrReleaseLabel
+      - emrInstanceCount
+      - emrClusterName
+      #- emrKeyName
+      #- emrLogUri
+    - Label:
+        default: Glue Parameters
+      Parameters:
+      - GlueDatabaseName
+      - GlueCrawlerName
+      - DatasetsS3Path
+Parameters:
+  GlueDatabaseName:
+    Type: String
+    Default: work_yoshim_sageglue
+  GlueCrawlerName:
+    Type: String
+    Default: work_yoshim_sageglue_S3Crawler
+  DatasetsS3Path:
+    Type: String
+    Default: s3://sagemaker-cm-yoshim/sageglue/data/
+  VPCId:
+    Description: VPC in which to launch this stack
+    Type: AWS::EC2::VPC::Id
+  VPCSubnet:
+    Description: Subnet in which to launch this stack 
+    Type: AWS::EC2::Subnet::Id
+  SageMakerInstanceName:
+    Description: Name for the SageMaker notebook [NOTE - must be unique in account and region]
+    Default: work-yoshim-sageglue
+    Type: String
+  SageMakerInstanceType:
+    Description: The type of SageMaker notebook to be provisioned
+    Type: String
+    Default: ml.t2.medium
+    AllowedValues:
+    - ml.t2.medium
+    - ml.t2.large
+    - ml.t2.xlarge
+    - ml.t2.2xlarge
+    - ml.m4.xlarge
+    - ml.m4.2xlarge
+    - ml.m4.4xlarge
+    - ml.m4.10xlarge
+    - ml.m4.16xlarge
+    - ml.p2.xlarge
+    - ml.p2.8xlarge
+    - ml.p2.16xlarge
+    - ml.p3.2xlarge
+    - ml.p3.8xlarge
+    - ml.p3.16xlarge
+  SageMakerConfigName:
+    Description: SageMaker Lifecycle ConfigName [NOTE - must be unique in account and region]
+    Type: String
+    Default: work-yoshim-sageglue
+  emrInstanceType:
+    Description: Choose the instance type for EMR
+    # Currently template only contains a subset of them: 
+    # https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-supported-instance-types.html 
+    Type: String
+    Default: m4.large
+    AllowedValues:
+    - m4.large 
+    - m4.xlarge 
+    - m4.2xlarge 
+    - m4.4xlarge 
+    - m4.10xlarge 
+    - m4.16xlarge
+  emrInstanceCount:
+    Type: Number
+    Default: 2
+  emrClusterName:
+    Type: String
+    Default: work-yoshim-sageglue
+  #emrLogUri:
+  #  Type: String
+  #  Default: s3://<bucket>/emrlogs/    
+  #emrKeyName:
+  #  Description: Key to use to access EMR
+  #  Type: AWS::EC2::KeyPair::KeyName
+  #  Default: winkey    
+
+Mappings:
+  AWSInfoRegionMap:
+    ap-northeast-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-northeast-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-south-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-southeast-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-southeast-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    eu-central-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    eu-west-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    sa-east-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-east-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-east-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-gov-west-1:
+      Partition: aws-us-gov
+      S3EndpointURL: https://s3-us-gov-west-1.amazonaws.com
+    us-west-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-west-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+Resources:      
+  SageMakerNotebookStack:
+     # 
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        SageMakerInstanceType: 
+            Ref: SageMakerInstanceType
+        VPCId:
+          Ref: VPCId
+        VPCSubnet: 
+            Ref: VPCSubnet
+        SageMakerInstanceName:
+            Ref: SageMakerInstanceName
+        SageMakerConfigName:
+            Ref: SageMakerConfigName
+        # Yep. Overloaded name. Sorry.
+        emrClusterName:
+            Fn::GetAtt:
+            - EMRStack
+            - Outputs.EMRClusterId 
+      TemplateURL: https://s3.amazonaws.com/aws-machine-learning-blog/artifacts/sageglues3/sagemaker-notebook.yaml
+  EMRStack:
+    # 
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        InstanceType:       !Ref emrInstanceType
+        InstanceCount:      !Ref emrInstanceCount
+        # Leave ReleaseLabel as emr-5.12.0, as tested there. (TO DO: Bug in 5-14; check if fixed?)
+        #ReleaseLabel:      !Ref emrReleaseLabel  
+        emrClusterName:     !Ref emrClusterName
+        #emrLogUri:          !Ref emrLogUri
+        #emrKeyName:        !Ref emrKeyName       
+        VPCId:              !Ref VPCId
+        VPCSubnet:          !Ref VPCSubnet 
+      TemplateURL: https://s3.amazonaws.com/aws-machine-learning-blog/artifacts/sageglues3/sparkemr.yaml   
+  GlueCrawlerStack:
+    # 
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        GlueDatabaseName:   !Ref GlueDatabaseName
+        GlueCrawlerName:    !Ref GlueCrawlerName
+        DatasetsS3Path:     !Ref DatasetsS3Path
+      TemplateURL: https://s3.amazonaws.com/aws-machine-learning-blog/artifacts/sageglues3/gluelegislators.yaml            
+Outputs:
+  SageMakerNotebookInstanceId: 
+    Value:
+        Fn::GetAtt:
+            - SageMakerNotebookStack
+            - Outputs.SageMakerNotebookInstanceId
+  SageMakerInstanceSecurityGroupId:
+    Value:
+        Fn::GetAtt:
+            - SageMakerNotebookStack
+            - Outputs.SageMakerInstanceSecurityGroupId     
+  EMRClusterId:
+    Value: 
+        Fn::GetAtt:
+          - EMRStack
+          - Outputs.EMRClusterId 
+  GlueDatabase:
+    Description: Glue Service Role ARN
+    Value:
+      Fn::GetAtt:
+          - GlueCrawlerStack
+          - Outputs.GlueDatabase       
+  GlueS3Crawler:
+    Description: Glue S3 crawler
+    Value:
+      Fn::GetAtt:
+          - GlueCrawlerStack
+          - Outputs.GlueS3Crawler                
+  
