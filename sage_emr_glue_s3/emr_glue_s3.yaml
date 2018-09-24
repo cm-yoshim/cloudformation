@@ -15,7 +15,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 AWSTemplateFormatVersion: '2010-09-09'
-Description: This master template executes other templates to create an EMR cluster with Glue, and a SageMaker notebook instance
+Description: This master template executes other templates to create an EMR cluster with Glue
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
