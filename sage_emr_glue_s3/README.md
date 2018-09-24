@@ -2,7 +2,7 @@
 SageMakerからS3のファイルを操作するためのcloudforamtionテンプレートを作成した。
 https://dev.classmethod.jp/machine-learning/amazon-sagemaker-glue-s3-emr-operation/
 
-基本的には下記のエントリー通りに実行していけば問題ないが、これだと「SageMakerインスタンス」も再作成することになってしまう。
+基本的には下記のエントリー通りに実行していけば問題ないが、これだと「SageMakerインスタンス」も再作成することになってしまう。  
 https://aws.amazon.com/jp/blogs/news/access-amazon-s3-data-managed-by-aws-glue-data-catalog-from-amazon-sagemaker-notebooks/
 
 そのため、「既存のSageMakerインスタンスに適用するため」のテンプレートを用意した。
@@ -16,7 +16,7 @@ https://aws.amazon.com/jp/blogs/news/access-amazon-s3-data-managed-by-aws-glue-d
 
 ```
 #!/bin/bash
-#set -e         
+#set -e         
 EMRGLUEIP=`aws emr list-instances --cluster-id <EMRクラスターのID> --instance-group-types MASTER --region <EMRクラスターがあるリージョン> | jq -r '.Instances[0].PrivateIpAddress' `
  
 echo $(date +%F_%T) 'Using: <EMRクラスターのID>: ' $EMRGLUEIP
